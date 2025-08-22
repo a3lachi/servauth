@@ -12,11 +12,17 @@ app.use("*", logger());
 app.use("*", timing());
 app.use("*", secureHeaders());
 
-// CORS
+// CORS - using Hono's built-in cors middleware
 app.use(
   "*",
   cors({
-    origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:3000"],
+    origin: (origin) => {
+      const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || ["http://localhost:3000"];
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
+        return origin;
+      }
+      return allowedOrigins[0]; // Default to first allowed origin
+    },
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],

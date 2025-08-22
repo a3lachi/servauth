@@ -87,22 +87,20 @@ Testing: Vitest (preferred for Bun)
 
 ✅ CORS support
 
-## API Endpoints (MVP)
-Method	Endpoint	Description	Auth Required
 
-POST	/auth/register	Register a new user	❌
+## API Endpoints
 
-POST	/auth/login	Login user, returns token/session	❌
-
-POST	/auth/logout	Logout user	✅
-
-POST	/auth/refresh	Refresh session/token	✅
-
-GET	/auth/me	Get logged-in user info	✅
-
-PUT	/auth/me	Update user info	✅
-
-DELETE	/auth/me	Delete user account	✅
+| Method | Endpoint              | Description              | Auth Required |
+|--------|-----------------------|--------------------------|---------------|
+| POST   | `/auth/register`      | Register a new user      | ❌ |
+| POST   | `/auth/login`         | Login user               | ❌ |
+| POST   | `/auth/logout`        | Logout user              | ✅ |
+| POST   | `/auth/refresh`       | Refresh session          | ✅ |
+| GET    | `/auth/me`            | Get current user         | ✅ |
+| PUT    | `/auth/me`            | Update user info         | ✅ |
+| DELETE | `/auth/me`            | Delete account           | ✅ |
+| POST   | `/auth/forgot-password` | Request password reset  | ❌ |
+| POST   | `/auth/reset-password`  | Reset password with token | ❌ |
 
 
 ## Database Schema
