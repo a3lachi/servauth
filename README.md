@@ -36,6 +36,12 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
+4. Create Tables
+```bash
+bun run db:generate      
+bun run db:migrate
+```
+
 
 ## Tech Stack
 
