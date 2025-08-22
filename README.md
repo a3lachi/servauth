@@ -1,30 +1,43 @@
 # Servauth
 
-## 1. Overview
+A high-performance authentication server built with Bun, Hono, Better-Auth, and Drizzle ORM.
 
-We aim to build a lightweight, high-performance authentication server that provides secure user management and session handling. The server will be powered by Bun for speed, use Hono as the HTTP framework, and integrate Better-Auth for authentication. Drizzle ORM will be used for database access, ensuring type-safe queries. The application will be containerized with Docker for easy deployment.
+## Features
 
-## 2. Goals
+- 🚀 **Fast**: Built on Bun runtime for maximum performance
+- 🔐 **Secure**: Industry-standard authentication with Better-Auth
+- 📦 **Type-safe**: Full TypeScript with Drizzle ORM
+- 🐳 **Containerized**: Docker ready for easy deployment
+- ⚡ **Lightweight**: Minimal dependencies, maximum efficiency
 
-Provide a scalable authentication system for modern applications (web, mobile, APIs).
+## Quick Start
 
-Ensure developer-friendly setup with TypeScript and Bun.
+### Prerequisites
 
-Guarantee security best practices (hashed passwords, secure cookies, CSRF protection, JWT or session tokens).
+- Bun 1.0+ or Docker
+- PostgreSQL 14+ (or use Docker Compose)
 
-Enable flexibility for integration with external apps via REST/GraphQL.
+### Local Development
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd auth-server
+```
 
-Ensure deployment portability using Docker.
+2. Install dependencies:
+```bash
+bun install
+```
 
-## 3. Non-Goals
+3. Set up environment variables:
 
-This project will not implement a full frontend UI (only API endpoints).
+```bash
+cp .env.example .env
+# Edit .env with your configuration
+```
 
-OAuth2/Social logins (Google, GitHub, etc.) are not included in the MVP.
 
-Rate-limiting, advanced analytics, or multi-tenant support are outside MVP scope.
-
-## 4. Tech Stack
+## Tech Stack
 
 Runtime: Bun
 
@@ -42,7 +55,7 @@ Containerization: Docker & Docker Compose
 
 Testing: Vitest (preferred for Bun)
 
-## 5. Functional Requirements
+## Functional Requirements
 
 ### Authentication
 
@@ -74,7 +87,7 @@ Testing: Vitest (preferred for Bun)
 
 ✅ CORS support
 
-## 6. API Endpoints (MVP)
+## API Endpoints (MVP)
 Method	Endpoint	Description	Auth Required
 
 POST	/auth/register	Register a new user	❌
@@ -92,37 +105,14 @@ PUT	/auth/me	Update user info	✅
 DELETE	/auth/me	Delete user account	✅
 
 
-## 7. Database Schema (Drizzle ORM)
+## Database Schema
 
-### Users table
+The application uses PostgreSQL with the following main tables:
 
-Column	Type	Constraints
-
-id	UUID (PK)	Primary key
-
-email	VARCHAR(255)	Unique, not null
-
-password	VARCHAR(255)	Hashed
-
-username	VARCHAR(100)	Optional
-
-created_at	TIMESTAMP	Default now()
-
-updated_at	TIMESTAMP	Auto-update
-
-sessions table (if session-based)
-
-Column	Type	Constraints
-
-id	UUID (PK)	Primary key
-
-user_id	UUID (FK)	References users.id
-
-token	VARCHAR(255)	Unique
-
-expires_at	TIMESTAMP	Expiration date
-
-created_at	TIMESTAMP	Default now()
+users - User accounts
+accounts - Authentication providers
+sessions - Active user sessions
+verifications - Email/token verifications
 
 ## 8. Architecture
 
@@ -152,3 +142,5 @@ Environment variables for DB connection, JWT secret, etc.
 ✅ Server scales to 10k concurrent connections with Bun’s event loop
 
 ✅ Developer onboarding takes <10 minutes with docker-compose up
+
+
