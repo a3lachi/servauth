@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
+    "db:setup": "bun run src/db/setup.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun run src/db/migrate.ts",
     "db:push": "drizzle-kit push",
@@ -17,8 +18,7 @@
     "better-auth": "^1.0.9",
     "drizzle-orm": "^0.38.2",
     "postgres": "^3.4.5",
-    "zod": "^3.24.1",
-    "argon2": "^0.41.1"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/bun": "latest",

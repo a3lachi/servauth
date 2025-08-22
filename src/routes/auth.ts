@@ -14,28 +14,44 @@ authRoutes.post("/register", validate(RegisterSchema), async (c) => {
   const data = c.get("validatedData");
   
   try {
+    console.log("kjhgfghjk"); // Debug log from your test
+    
+    // Create a proper request for Better-Auth
+    const request = new Request(`${process.env.BETTER_AUTH_URL || 'http://localhost:3000'}/api/auth/sign-up/email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: data.email,
+        password: data.password,
+        name: data.name,
+      }),
+    });
+
     const result = await auth.api.signUpEmail({
       body: {
         email: data.email,
         password: data.password,
         name: data.name,
       },
-      asResponse: true,
     });
 
-    if (!result.ok) {
-      const error = await result.json();
-      return c.json({ error: error.message || "Registration failed" }, 400);
+    if (!result || result.error) {
+      return c.json({ 
+        error: result?.error || "Registration failed" 
+      }, 400);
     }
 
-    const response = await result.json();
     return c.json({
       message: "Registration successful",
-      user: response.user,
+      user: result.user,
     }, 201);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Registration error:", error);
-    return c.json({ error: "Registration failed" }, 500);
+    return c.json({ 
+      error: error.message || "Registration failed" 
+    }, 500);
   }
 });
 
@@ -49,51 +65,80 @@ authRoutes.post("/login", validate(LoginSchema), async (c) => {
         email: data.email,
         password: data.password,
       },
-      asResponse: true,
     });
 
-    if (!result.ok) {
+    if (!result || result.error) {
       return c.json({ error: "Invalid credentials" }, 401);
     }
 
-    const response = await result.json();
-    
-    // Set cookie headers
-    const cookieHeader = result.headers.get("set-cookie");
-    if (cookieHeader) {
-      c.header("set-cookie", cookieHeader);
+    // Set the session cookie properly
+    if (result.headers) {
+      // Better-Auth returns headers we need to forward
+      result.headers.forEach((value: string, key: string) => {
+        if (key.toLowerCase() === 'set-cookie') {
+          c.header('set-cookie', value);
+        }
+      });
+    } else if (result.session) {
+      // Manually create cookie if Better-Auth doesn't provide headers
+      const cookieOptions = [
+        `better-auth.session_token=${result.session.token}`,
+        'Path=/',
+        'HttpOnly',
+        'SameSite=Lax',
+        `Max-Age=${60 * 60 * 24 * 7}` // 7 days
+      ].join('; ');
+      
+      c.header('set-cookie', cookieOptions);
     }
 
     return c.json({
       message: "Login successful",
-      user: response.user,
-      session: response.session,
+      user: result.user,
+      session: result.session,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Login error:", error);
-    return c.json({ error: "Login failed" }, 500);
+    return c.json({ 
+      error: error.message || "Login failed" 
+    }, 500);
   }
 });
 
 // Logout
 authRoutes.post("/logout", requireAuth, async (c) => {
   try {
-    await auth.api.signOut({
+    const request = new Request(c.req.url, {
+      method: c.req.method,
       headers: c.req.raw.headers,
     });
 
+    await auth.api.signOut({
+      headers: request.headers,
+    });
+
+    // Clear the session cookie
+    c.header('set-cookie', 'better-auth.session_token=; Path=/; HttpOnly; Max-Age=0');
+
     return c.json({ message: "Logout successful" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Logout error:", error);
-    return c.json({ error: "Logout failed" }, 500);
+    return c.json({ 
+      error: error.message || "Logout failed" 
+    }, 500);
   }
 });
 
 // Refresh session
 authRoutes.post("/refresh", async (c) => {
   try {
-    const session = await auth.api.getSession({
+    const request = new Request(c.req.url, {
+      method: c.req.method,
       headers: c.req.raw.headers,
+    });
+
+    const session = await auth.api.getSession({
+      headers: request.headers,
     });
 
     if (!session) {
@@ -104,9 +149,11 @@ authRoutes.post("/refresh", async (c) => {
       user: session.user,
       session: session.session,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Refresh error:", error);
-    return c.json({ error: "Session refresh failed" }, 500);
+    return c.json({ 
+      error: error.message || "Session refresh failed" 
+    }, 500);
   }
 });
 
@@ -143,9 +190,11 @@ authRoutes.put("/me", requireAuth, async (c) => {
       .limit(1);
     
     return c.json({ user: updatedUser[0] });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Update user error:", error);
-    return c.json({ error: "Failed to update user" }, 500);
+    return c.json({ 
+      error: error.message || "Failed to update user" 
+    }, 500);
   }
 });
 
@@ -156,10 +205,15 @@ authRoutes.delete("/me", requireAuth, async (c) => {
   try {
     await db.delete(users).where(eq(users.id, user.id));
     
+    // Clear the session cookie
+    c.header('set-cookie', 'better-auth.session_token=; Path=/; HttpOnly; Max-Age=0');
+    
     return c.json({ message: "Account deleted successfully" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Delete user error:", error);
-    return c.json({ error: "Failed to delete account" }, 500);
+    return c.json({ 
+      error: error.message || "Failed to delete account" 
+    }, 500);
   }
 });
 
@@ -178,9 +232,11 @@ authRoutes.post("/forgot-password", validate(ResetPasswordSchema), async (c) => 
     return c.json({ 
       message: "If an account exists with this email, a password reset link has been sent" 
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Password reset error:", error);
-    return c.json({ error: "Failed to process password reset" }, 500);
+    return c.json({ 
+      error: error.message || "Failed to process password reset" 
+    }, 500);
   }
 });
 
@@ -196,14 +252,16 @@ authRoutes.post("/reset-password", validate(NewPasswordSchema), async (c) => {
       },
     });
 
-    if (!result.ok) {
+    if (!result || result.error) {
       return c.json({ error: "Invalid or expired token" }, 400);
     }
 
     return c.json({ message: "Password reset successful" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Password reset error:", error);
-    return c.json({ error: "Failed to reset password" }, 500);
+    return c.json({ 
+      error: error.message || "Failed to reset password" 
+    }, 500);
   }
 });
 

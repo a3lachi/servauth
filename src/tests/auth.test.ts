@@ -7,7 +7,7 @@ let testUser = {
   password: "testPassword123!",
   name: "Test User"
 };
-let authToken: string;
+let sessionCookie: string = "";
 
 describe("Authentication API", () => {
   test("POST /auth/register - should register a new user", async () => {
@@ -42,10 +42,12 @@ describe("Authentication API", () => {
     expect(data.message).toBe("Login successful");
     expect(data.user.email).toBe(testUser.email);
     
-    // Extract session cookie
-    const setCookie = response.headers.get("set-cookie");
-    if (setCookie) {
-      authToken = setCookie.split(";")[0].split("=")[1];
+    // Extract all cookies from the set-cookie header
+    const setCookieHeader = response.headers.get("set-cookie");
+    if (setCookieHeader) {
+      // Better-Auth might set multiple cookies, we need to collect them all
+      sessionCookie = setCookieHeader;
+      console.log("Session cookie set:", sessionCookie);
     }
   });
 
@@ -54,10 +56,16 @@ describe("Authentication API", () => {
       new Request(`${baseURL}/auth/me`, {
         method: "GET",
         headers: {
-          Cookie: `auth-session=${authToken}`,
+          Cookie: sessionCookie, // Use the full cookie string
         },
       })
     );
+
+    console.log("GET /auth/me status:", response.status);
+    if (response.status !== 200) {
+      const errorData = await response.json();
+      console.log("Error response:", errorData);
+    }
 
     expect(response.status).toBe(200);
     const data = await response.json();
@@ -70,7 +78,7 @@ describe("Authentication API", () => {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Cookie: `auth-session=${authToken}`,
+          Cookie: sessionCookie,
         },
         body: JSON.stringify({
           name: "Updated Name",
@@ -88,7 +96,7 @@ describe("Authentication API", () => {
       new Request(`${baseURL}/auth/logout`, {
         method: "POST",
         headers: {
-          Cookie: `auth-session=${authToken}`,
+          Cookie: sessionCookie,
         },
       })
     );
@@ -96,5 +104,19 @@ describe("Authentication API", () => {
     expect(response.status).toBe(200);
     const data = await response.json();
     expect(data.message).toBe("Logout successful");
+  });
+
+  // Test that the session is invalid after logout
+  test("GET /auth/me - should fail after logout", async () => {
+    const response = await app.fetch(
+      new Request(`${baseURL}/auth/me`, {
+        method: "GET",
+        headers: {
+          Cookie: sessionCookie,
+        },
+      })
+    );
+
+    expect(response.status).toBe(401);
   });
 });
