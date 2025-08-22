@@ -108,9 +108,13 @@ Testing: Vitest (preferred for Bun)
 The application uses PostgreSQL with the following main tables:
 
 users - User accounts
+
 accounts - Authentication providers
+
 sessions - Active user sessions
+
 verifications - Email/token verifications
+
 
 ## 8. Architecture
 
