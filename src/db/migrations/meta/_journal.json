@@ -8,6 +8,13 @@
       "when": 1755867479161,
       "tag": "0000_curious_agent_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1755899511508,
+      "tag": "0001_parched_proteus",
+      "breakpoints": true
     }
   ]
 }
