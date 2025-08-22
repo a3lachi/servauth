@@ -43,7 +43,8 @@ Containerization: Docker & Docker Compose
 Testing: Vitest (preferred for Bun)
 
 ## 5. Functional Requirements
-Authentication
+
+### Authentication
 
 ✅ User registration (email + password)
 
@@ -55,7 +56,7 @@ Authentication
 
 ✅ Logout
 
-User Management
+### User Management
 
 ✅ Fetch current user profile (/me)
 
@@ -63,7 +64,7 @@ User Management
 
 ✅ Delete account
 
-Security
+### Security
 
 ✅ Passwords stored with hashing (Argon2 or bcrypt)
 
@@ -75,29 +76,52 @@ Security
 
 ## 6. API Endpoints (MVP)
 Method	Endpoint	Description	Auth Required
+
 POST	/auth/register	Register a new user	❌
+
 POST	/auth/login	Login user, returns token/session	❌
+
 POST	/auth/logout	Logout user	✅
+
 POST	/auth/refresh	Refresh session/token	✅
+
 GET	/auth/me	Get logged-in user info	✅
+
 PUT	/auth/me	Update user info	✅
+
 DELETE	/auth/me	Delete user account	✅
 
+
 ## 7. Database Schema (Drizzle ORM)
-users table
+
+### Users table
+
 Column	Type	Constraints
+
 id	UUID (PK)	Primary key
+
 email	VARCHAR(255)	Unique, not null
+
 password	VARCHAR(255)	Hashed
+
 username	VARCHAR(100)	Optional
+
 created_at	TIMESTAMP	Default now()
+
 updated_at	TIMESTAMP	Auto-update
+
 sessions table (if session-based)
+
 Column	Type	Constraints
+
 id	UUID (PK)	Primary key
+
 user_id	UUID (FK)	References users.id
+
 token	VARCHAR(255)	Unique
+
 expires_at	TIMESTAMP	Expiration date
+
 created_at	TIMESTAMP	Default now()
 
 ## 8. Architecture
