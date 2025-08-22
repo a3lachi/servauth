@@ -20,8 +20,8 @@ A high-performance authentication server built with Bun, Hono, Better-Auth, and 
 ### Local Development
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd auth-server
+git clone https://github.com/a3lachi/servauth.git
+cd servauth
 ```
 
 2. Install dependencies:
@@ -40,6 +40,11 @@ cp .env.example .env
 ```bash
 bun run db:generate      
 bun run db:migrate
+```
+
+5. Run
+```bash
+bun run dev
 ```
 
 
