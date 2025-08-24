@@ -24,16 +24,7 @@ async function runMigrations() {
   }
 }
 
-// Add timeout to prevent hanging
-const timeoutId = setTimeout(() => {
-  console.error("Migration timed out after 25 seconds");
-  process.exit(1);
-}, 25000);
-
-runMigrations().then(() => {
-  clearTimeout(timeoutId);
-}).catch((err) => {
-  clearTimeout(timeoutId);
+runMigrations().catch((err) => {
   console.error("Migration failed!", err);
   process.exit(1);
 });
