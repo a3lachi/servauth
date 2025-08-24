@@ -3,18 +3,37 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrationClient } from "./index";
 
 async function runMigrations() {
-  const db = drizzle(migrationClient);
-  
-  console.log("Running migrations...");
-  
-  await migrate(db, { migrationsFolder: "./src/db/migrations" });
-  
-  console.log("Migrations completed!");
-  
-  await migrationClient.end();
+  try {
+    console.log("Connecting to database...");
+    console.log("Database URL:", process.env.DATABASE_URL?.replace(/\/\/.*@/, '//***:***@'));
+    
+    const db = drizzle(migrationClient);
+    
+    console.log("Running migrations...");
+    
+    await migrate(db, { migrationsFolder: "./src/db/migrations" });
+    
+    console.log("Migrations completed successfully!");
+    
+    await migrationClient.end();
+    console.log("Database connection closed.");
+  } catch (error) {
+    console.error("Migration failed:", error);
+    await migrationClient.end();
+    process.exit(1);
+  }
 }
 
-runMigrations().catch((err) => {
+// Add timeout to prevent hanging
+const timeoutId = setTimeout(() => {
+  console.error("Migration timed out after 25 seconds");
+  process.exit(1);
+}, 25000);
+
+runMigrations().then(() => {
+  clearTimeout(timeoutId);
+}).catch((err) => {
+  clearTimeout(timeoutId);
   console.error("Migration failed!", err);
   process.exit(1);
 });
