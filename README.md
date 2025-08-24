@@ -368,13 +368,228 @@ Database Layer: Drizzle ORM for migrations & queries
 Deployment: Docker (Bun app + PostgreSQL container)
 
 ## 9. Deployment
-Docker setup
 
-Dockerfile: Build Bun app
+### Docker Deployment (Recommended)
 
-docker-compose.yml: Run Bun + PostgreSQL together
+The application is designed to be deployed using Docker containers for maximum portability and ease of deployment.
 
-Environment variables for DB connection, JWT secret, etc.
+#### Prerequisites
+
+- Docker 20.0+
+- Docker Compose 2.0+
+- Git (for cloning the repository)
+
+#### Quick Deployment
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/a3lachi/servauth.git
+   cd servauth
+   ```
+
+2. **Configure environment variables**:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your production settings
+   ```
+
+3. **Deploy with Docker Compose**:
+   ```bash
+   docker-compose up --build -d
+   ```
+
+4. **Verify deployment**:
+   ```bash
+   # Check container status
+   docker-compose ps
+   
+   # Test health endpoint
+   curl http://localhost:3000/
+   ```
+
+#### Environment Configuration
+
+The application uses environment variables for configuration. Update your `.env` file with production values:
+
+```bash
+# Server Configuration
+PORT=3000
+NODE_ENV=production
+
+# Database Configuration (automatically handled by Docker Compose)
+POSTGRES_HOST=postgres
+POSTGRES_USER=your_db_user
+POSTGRES_PASSWORD=your_secure_password
+POSTGRES_DB=servauth_prod
+POSTGRES_PORT=5432
+DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+
+# Authentication
+BETTER_AUTH_SECRET=your-super-secure-secret-key-minimum-32-characters
+BETTER_AUTH_URL=https://your-domain.com
+CORS_ORIGIN=https://your-frontend.com,https://your-admin.com
+```
+
+#### Docker Services
+
+The `docker-compose.yml` configures two main services:
+
+##### PostgreSQL Database
+```yaml
+postgres:
+  image: postgres:16-alpine
+  environment:
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  
+    POSTGRES_DB: ${POSTGRES_DB}
+  ports:
+    - "${POSTGRES_PORT}:5432"
+  volumes:
+    - postgres_data:/var/lib/postgresql/data
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+```
+
+##### Auth Server Application
+```yaml
+auth-server:
+  build:
+    context: .
+    dockerfile: docker/Dockerfile
+  environment:
+    PORT: ${PORT}
+    DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}
+    BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+  ports:
+    - "${PORT}:${PORT}"
+  depends_on:
+    postgres:
+      condition: service_healthy
+```
+
+#### Production Deployment Commands
+
+```bash
+# Start services in detached mode
+docker-compose up -d
+
+# View logs
+docker-compose logs -f auth-server
+
+# Stop services
+docker-compose down
+
+# Stop and remove volumes (WARNING: This deletes data)
+docker-compose down -v
+
+# Rebuild and restart
+docker-compose up --build -d
+
+# Scale the application (if using load balancer)
+docker-compose up --scale auth-server=3 -d
+```
+
+#### Health Checks & Monitoring
+
+The application includes built-in health checks:
+
+```bash
+# Application health check
+curl http://localhost:3000/
+
+# Expected response:
+{
+  "status": "healthy",
+  "service": "auth-server", 
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}
+
+# Database connection check
+docker-compose exec postgres pg_isready -U your_db_user -d servauth_prod
+
+# Container status
+docker-compose ps
+```
+
+#### Security Considerations for Production
+
+1. **Environment Variables**:
+   - Use strong, unique passwords
+   - Generate secure JWT secrets (minimum 32 characters)
+   - Set appropriate CORS origins
+
+2. **Network Security**:
+   - Use HTTPS in production
+   - Configure firewall rules
+   - Consider using Docker networks for isolation
+
+3. **Database Security**:
+   - Regular backups
+   - Monitor connection limits
+   - Use read replicas for scaling
+
+4. **Container Security**:
+   - Keep base images updated
+   - Run containers as non-root users
+   - Scan images for vulnerabilities
+
+#### Backup & Recovery
+
+```bash
+# Database backup
+docker-compose exec postgres pg_dump -U your_db_user servauth_prod > backup.sql
+
+# Database restore
+docker-compose exec -T postgres psql -U your_db_user servauth_prod < backup.sql
+
+# Volume backup
+docker run --rm -v servauth_postgres_data:/data -v $(pwd):/backup alpine tar czf /backup/postgres_backup.tar.gz /data
+```
+
+#### Troubleshooting
+
+Common deployment issues and solutions:
+
+1. **Container won't start**:
+   ```bash
+   # Check logs
+   docker-compose logs auth-server
+   
+   # Verify environment variables
+   docker-compose config
+   ```
+
+2. **Database connection issues**:
+   ```bash
+   # Check postgres container
+   docker-compose logs postgres
+   
+   # Test database connectivity
+   docker-compose exec auth-server pg_isready -h postgres -p 5432
+   ```
+
+3. **Port conflicts**:
+   ```bash
+   # Check what's using port 3000
+   lsof -i :3000
+   
+   # Or change PORT in .env file
+   PORT=8080
+   ```
+
+#### Updating the Application
+
+```bash
+# Pull latest changes
+git pull origin main
+
+# Rebuild and restart
+docker-compose up --build -d
+
+# Check deployment
+docker-compose ps
+curl http://localhost:3000/
+```
 
 ## 10. Success Metrics
 
