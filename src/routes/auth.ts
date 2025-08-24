@@ -4,13 +4,40 @@ import { auth } from "../lib/auth";
 import { db } from "../db";
 import { users } from "../db/schema";
 import { eq } from "drizzle-orm";
+import { 
+  registerSchema, 
+  loginSchema, 
+  updateUserSchema,
+  validateRequestBody,
+  transformUserResponse
+} from "../types";
 
 const authRoutes = new Hono();
 
 // Custom authentication endpoints that wrap Better-Auth
 authRoutes.post("/auth/register", async (c) => {
   try {
-    const body = await c.req.json();
+    let body;
+    try {
+      body = await c.req.json();
+    } catch (parseError) {
+      return c.json({ 
+        error: "Invalid JSON format",
+        details: ["Request body must be valid JSON"]
+      }, 400);
+    }
+    
+    // Validate request body with Zod
+    const validation = validateRequestBody(registerSchema, body);
+    if (!validation.success) {
+      console.log("Validation failed:", validation.errors);
+      return c.json({ 
+        error: "Validation failed", 
+        details: validation.errors 
+      }, 400);
+    }
+
+    const { email, password, name } = validation.data;
     
     // Call Better-Auth's sign-up through its handler
     const request = new Request(`${c.req.url.replace('/auth/register', '/api/auth/sign-up/email')}`, {
@@ -19,22 +46,22 @@ authRoutes.post("/auth/register", async (c) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        email: body.email,
-        password: body.password,
-        name: body.name,
+        email,
+        password,
+        name,
       }),
     });
     
     const response = await auth.handler(request);
-    const data = await response.json();
+    const data = await response.json() as any;
     
     if (response.status >= 400) {
-      return c.json({ error: data.error || "Registration failed" }, response.status);
+      return c.json({ error: data.error || "Registration failed" }, response.status as any);
     }
     
     return c.json({
       message: "Registration successful",
-      user: data.user,
+      user: transformUserResponse(data.user),
     }, 201);
   } catch (error: any) {
     console.error("Registration error:", error);
@@ -44,7 +71,27 @@ authRoutes.post("/auth/register", async (c) => {
 
 authRoutes.post("/auth/login", async (c) => {
   try {
-    const body = await c.req.json();
+    let body;
+    try {
+      body = await c.req.json();
+    } catch (parseError) {
+      return c.json({ 
+        error: "Invalid JSON format",
+        details: ["Request body must be valid JSON"]
+      }, 400);
+    }
+    
+    // Validate request body with Zod
+    const validation = validateRequestBody(loginSchema, body);
+    if (!validation.success) {
+      console.log("Login validation failed:", validation.errors);
+      return c.json({ 
+        error: "Validation failed", 
+        details: validation.errors 
+      }, 400);
+    }
+
+    const { email, password } = validation.data;
     
     // Call Better-Auth's sign-in through its handler
     const request = new Request(`${c.req.url.replace('/auth/login', '/api/auth/sign-in/email')}`, {
@@ -53,8 +100,8 @@ authRoutes.post("/auth/login", async (c) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        email: body.email,
-        password: body.password,
+        email,
+        password,
       }),
     });
     
@@ -66,7 +113,7 @@ authRoutes.post("/auth/login", async (c) => {
       c.header("set-cookie", setCookie);
     }
     
-    const data = await response.json();
+    const data = await response.json() as any;
     
     if (response.status >= 400) {
       return c.json({ error: "Invalid credentials" }, 401);
@@ -74,7 +121,7 @@ authRoutes.post("/auth/login", async (c) => {
     
     return c.json({
       message: "Login successful",
-      user: data.user,
+      user: transformUserResponse(data.user),
       session: data.session,
     }, 200);
   } catch (error: any) {
@@ -116,7 +163,7 @@ authRoutes.get("/auth/me", async (c) => {
       return c.json({ error: "Unauthorized" }, 401);
     }
     
-    return c.json({ user: session.user });
+    return c.json({ user: transformUserResponse(session.user) });
   } catch (error: any) {
     console.error("Get user error:", error);
     return c.json({ error: "Failed to get user" }, 401);
@@ -133,11 +180,31 @@ authRoutes.put("/auth/me", async (c) => {
       return c.json({ error: "Unauthorized" }, 401);
     }
     
-    const body = await c.req.json();
+    let body;
+    try {
+      body = await c.req.json();
+    } catch (parseError) {
+      return c.json({ 
+        error: "Invalid JSON format",
+        details: ["Request body must be valid JSON"]
+      }, 400);
+    }
+    
+    // Validate request body with Zod
+    const validation = validateRequestBody(updateUserSchema, body);
+    if (!validation.success) {
+      console.log("Update validation failed:", validation.errors);
+      return c.json({ 
+        error: "Validation failed", 
+        details: validation.errors 
+      }, 400);
+    }
+
+    const { name, email } = validation.data;
     const updates: any = {};
     
-    if (body.name !== undefined) updates.name = body.name;
-    if (body.email !== undefined) updates.email = body.email;
+    if (name !== undefined) updates.name = name;
+    if (email !== undefined) updates.email = email;
     
     if (Object.keys(updates).length > 0) {
       updates.updatedAt = new Date();
@@ -154,7 +221,7 @@ authRoutes.put("/auth/me", async (c) => {
       .where(eq(users.id, session.user.id))
       .limit(1);
     
-    return c.json({ user: updatedUser[0] });
+    return c.json({ user: transformUserResponse(updatedUser[0]) });
   } catch (error: any) {
     console.error("Update user error:", error);
     return c.json({ error: error.message || "Failed to update user" }, 500);
