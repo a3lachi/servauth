@@ -291,13 +291,70 @@ curl -X POST http://localhost:3000/auth/register \
 
 The application uses PostgreSQL with the following main tables:
 
-users - User accounts
+### Users Table
+Stores user account information.
 
-accounts - Authentication providers
+| Column | Type | Description | Constraints |
+|--------|------|-------------|-------------|
+| `id` | `text` | Unique user identifier | Primary Key |
+| `email` | `text` | User's email address | Not Null, Unique |
+| `emailVerified` | `boolean` | Email verification status | Default: false |
+| `name` | `text` | User's display name | Nullable |
+| `image` | `text` | Profile image URL | Nullable |
+| `createdAt` | `timestamp` | Account creation time | Not Null, Default: now() |
+| `updatedAt` | `timestamp` | Last update time | Not Null, Default: now() |
 
-sessions - Active user sessions
+### Accounts Table  
+Manages authentication providers and account linking.
 
-verifications - Email/token verifications
+| Column | Type | Description | Constraints |
+|--------|------|-------------|-------------|
+| `id` | `text` | Unique account identifier | Primary Key |
+| `userId` | `text` | Reference to users table | Foreign Key, Not Null |
+| `accountId` | `text` | Provider-specific account ID | Not Null |
+| `providerId` | `text` | Authentication provider identifier | Not Null |
+| `accessToken` | `text` | OAuth access token | Nullable |
+| `refreshToken` | `text` | OAuth refresh token | Nullable |
+| `accessTokenExpiresAt` | `timestamp` | Access token expiration | Nullable |
+| `refreshTokenExpiresAt` | `timestamp` | Refresh token expiration | Nullable |
+| `scope` | `text` | OAuth scope permissions | Nullable |
+| `password` | `text` | Hashed password (for email provider) | Nullable |
+| `createdAt` | `timestamp` | Account creation time | Not Null, Default: now() |
+| `updatedAt` | `timestamp` | Last update time | Not Null, Default: now() |
+
+### Sessions Table
+Tracks active user sessions for authentication.
+
+| Column | Type | Description | Constraints |
+|--------|------|-------------|-------------|
+| `id` | `text` | Unique session identifier | Primary Key |
+| `token` | `text` | Session token | Unique, Nullable |
+| `expiresAt` | `timestamp` | Session expiration time | Not Null |
+| `ipAddress` | `text` | Client IP address | Nullable |
+| `userAgent` | `text` | Client user agent | Nullable |
+| `userId` | `text` | Reference to users table | Foreign Key, Not Null |
+| `createdAt` | `timestamp` | Session creation time | Not Null, Default: now() |
+| `updatedAt` | `timestamp` | Last session update | Not Null, Default: now() |
+
+### Verifications Table
+Handles email verification and password reset tokens.
+
+| Column | Type | Description | Constraints |
+|--------|------|-------------|-------------|
+| `id` | `text` | Unique verification identifier | Primary Key |
+| `identifier` | `text` | Email or user identifier | Not Null |
+| `value` | `text` | Verification token/code | Not Null |
+| `expiresAt` | `timestamp` | Token expiration time | Not Null |
+| `createdAt` | `timestamp` | Token creation time | Nullable, Default: now() |
+| `updatedAt` | `timestamp` | Last update time | Nullable, Default: now() |
+
+### Relationships
+
+- **Users** → **Accounts**: One-to-many (one user can have multiple auth providers)
+- **Users** → **Sessions**: One-to-many (one user can have multiple active sessions)  
+- **Foreign Key Constraints**:
+  - `accounts.userId` → `users.id` (CASCADE DELETE)
+  - `sessions.userId` → `users.id` (CASCADE DELETE)
 
 
 ## 8. Architecture
