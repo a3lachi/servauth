@@ -7,6 +7,7 @@ A high-performance authentication server built with Bun, Hono, Better-Auth, and 
 - 🚀 **Fast**: Built on Bun runtime for maximum performance
 - 🔐 **Secure**: Industry-standard authentication with Better-Auth
 - 📦 **Type-safe**: Full TypeScript with Drizzle ORM
+- ✅ **Validated**: Comprehensive data validation with Zod schemas
 - 🐳 **Containerized**: Docker ready for easy deployment
 - ⚡ **Lightweight**: Minimal dependencies, maximum efficiency
 
@@ -47,6 +48,32 @@ bun run db:migrate
 bun run dev
 ```
 
+## Project Structure
+
+```
+servauth/
+├── src/
+│   ├── db/
+│   │   ├── index.ts          # Database connection
+│   │   ├── migrate.ts        # Migration runner
+│   │   └── schema.ts         # Drizzle schema definitions
+│   ├── lib/
+│   │   └── auth.ts           # Better-Auth configuration
+│   ├── routes/
+│   │   ├── auth.ts           # Authentication endpoints
+│   │   ├── better-auth.ts    # Better-Auth native endpoints
+│   │   └── health.ts         # Health check endpoint
+│   ├── types/
+│   │   └── index.ts          # Zod validation schemas & TypeScript types
+│   ├── tests/
+│   │   └── auth.test.ts      # Authentication tests
+│   └── index.ts              # Main server file
+├── docker/
+│   └── Dockerfile            # Docker container configuration
+├── docker-compose.yml        # Docker services orchestration
+├── drizzle.config.ts         # Drizzle ORM configuration
+└── package.json              # Dependencies and scripts
+```
 
 ## Tech Stack
 
@@ -57,6 +84,8 @@ Language: TypeScript
 Web Framework: Hono
 
 Auth: Better-Auth
+
+Validation: Zod
 
 ORM: Drizzle ORM
 
@@ -94,9 +123,13 @@ Testing: Vitest (preferred for Bun)
 
 ✅ CSRF protection
 
-✅ Input validation & sanitization
+✅ Input validation & sanitization (Zod schemas)
 
 ✅ CORS support
+
+✅ Type-safe request/response validation
+
+✅ Detailed error messages for better UX
 
 
 ## API Endpoints
@@ -113,6 +146,146 @@ Testing: Vitest (preferred for Bun)
 | POST   | `/auth/forgot-password` | Request password reset  | ❌ |
 | POST   | `/auth/reset-password`  | Reset password with token | ❌ |
 
+## Data Validation
+
+The API uses [Zod](https://zod.dev/) for comprehensive data validation, ensuring all inputs are properly validated before processing.
+
+### Validation Features
+
+- 📧 **Email validation**: Proper email format checking with length limits
+- 🔒 **Password strength**: Enforces strong passwords with complexity requirements
+- 👤 **Name validation**: Character restrictions and length limits
+- 🛡️ **Type safety**: Runtime validation with TypeScript type inference
+- 📝 **Detailed error messages**: User-friendly validation feedback
+
+### Validation Rules
+
+#### Registration (`POST /auth/register`)
+```typescript
+{
+  email: string,    // Valid email format, max 254 characters
+  password: string, // Min 8 chars, must contain uppercase, lowercase, and number
+  name: string      // Required, letters/spaces/hyphens/apostrophes only, max 100 chars
+}
+```
+
+#### Login (`POST /auth/login`)
+```typescript
+{
+  email: string,    // Valid email format
+  password: string  // Required, any length
+}
+```
+
+#### Profile Update (`PUT /auth/me`)
+```typescript
+{
+  name?: string,    // Optional, same rules as registration
+  email?: string    // Optional, valid email format
+}
+```
+*Note: At least one field must be provided*
+
+### Validation Response Format
+
+#### Success Response
+```json
+{
+  "message": "Registration successful",
+  "user": {
+    "id": "user_id",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "emailVerified": false,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+#### Validation Error Response
+```json
+{
+  "error": "Validation failed",
+  "details": [
+    "email: Invalid email format",
+    "password: Password must be at least 8 characters",
+    "password: Password must contain at least one lowercase letter, one uppercase letter, and one number",
+    "name: Name can only contain letters, spaces, hyphens, and apostrophes"
+  ]
+}
+```
+
+#### JSON Parse Error Response
+```json
+{
+  "error": "Invalid JSON format",
+  "details": [
+    "Request body must be valid JSON"
+  ]
+}
+```
+
+### Password Requirements
+
+- **Minimum length**: 8 characters
+- **Maximum length**: 128 characters  
+- **Required characters**:
+  - At least one lowercase letter (a-z)
+  - At least one uppercase letter (A-Z)
+  - At least one number (0-9)
+
+### Example Validation Scenarios
+
+#### Valid Registration Request
+```bash
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john.doe@example.com",
+    "password": "SecurePass123",
+    "name": "John Doe"
+  }'
+```
+
+#### Invalid Email Format
+```bash
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "invalid-email-format",
+    "password": "SecurePass123", 
+    "name": "John Doe"
+  }'
+
+# Response:
+{
+  "error": "Validation failed",
+  "details": [
+    "email: Invalid email format"
+  ]
+}
+```
+
+#### Weak Password
+```bash
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john.doe@example.com",
+    "password": "weak",
+    "name": "John Doe"
+  }'
+
+# Response:
+{
+  "error": "Validation failed", 
+  "details": [
+    "password: Password must be at least 8 characters",
+    "password: Password must contain at least one lowercase letter, one uppercase letter, and one number"
+  ]
+}
+```
 
 ## Database Schema
 
